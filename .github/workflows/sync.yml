@@ -1,7 +1,8 @@
 name: sync-molan-latest
 on:
   schedule:
-    - cron: '17 */6 * * *'
+    # 每天 UTC 01:23 跑一次（北京时间 09:23），避开整点高峰
+    - cron: '23 1 * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,8 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 拉取最新版并写入固定文件名
-        id: fetch
+      - name: 检查并同步最新版
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -29,14 +29,16 @@ jobs:
           head -c 400 latest.js | grep -q '/\*!' || { echo "内容不像音源脚本"; exit 1; }
           SZ=$(stat -c%s latest.js)
           test "$SZ" -gt 100000 || { echo "文件过小：$SZ"; exit 1; }
-          echo "tag=$TAG size=$SZ"
-          printf '%s  %s\n' "$(date -u +%F)" "$TAG" > last-check.txt
+          echo "检查完成：tag=$TAG size=$SZ"
           git config user.name  'molan-sync[bot]'
           git config user.email 'molan-sync[bot]@users.noreply.github.com'
-          git add latest.js last-check.txt
+          git add latest.js
           if git diff --cached --quiet; then
-            echo "无变化"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+            # 无新版也推一条空提交，给仓库保活，避免 60 天后定时被自动停用
+            git commit --allow-empty -m "daily check $TAG (no update)"
+            echo "无新版，已推送保活空提交"
+          else
+            git commit -m "sync $TAG"
+            echo "已同步 $TAG"
           fi
-          git commit -m "sync $TAG"
           git push
-          echo "changed=true" >> "$GITHUB_OUTPUT"
