@@ -6,17 +6,15 @@
 
 ## 在线导入地址
 
-把 `<你的用户名>` 换成自己的 GitHub 用户名：
-
 ```
-https://v4.gh-proxy.com/https://raw.githubusercontent.com/<你的用户名>/molan-latest/main/latest.js
+https://v4.gh-proxy.com/https://raw.githubusercontent.com/firely26710/molan-latest/main/latest.js
 ```
 
 打不开时换备用前缀：
 
 ```
-https://v4.gh-proxy.org/https://raw.githubusercontent.com/<你的用户名>/molan-latest/main/latest.js
-https://gh-proxy.org/https://raw.githubusercontent.com/<你的用户名>/molan-latest/main/latest.js
+https://v4.gh-proxy.org/https://raw.githubusercontent.com/firely26710/molan-latest/main/latest.js
+https://gh-proxy.org/https://raw.githubusercontent.com/firely26710/molan-latest/main/latest.js
 ```
 
 浏览器打开能看到 `/*!` 开头、数百 KB 的脚本正文即正常。可选校验：
