@@ -40,7 +40,3 @@ jobs:
           git commit -m "sync $TAG"
           git push
           echo "changed=true" >> "$GITHUB_OUTPUT"
-      - name: 刷新 jsDelivr 缓存
-        if: steps.fetch.outputs.changed == 'true'
-        run: |
-          curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/latest.js" || true
