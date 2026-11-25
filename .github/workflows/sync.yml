@@ -1,0 +1,46 @@
+name: sync-molan-latest
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: sync-molan
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 拉取最新版并写入固定文件名
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/baiji6/molanyinyueyuan/releases/latest"
+          AUTH=(-H "Authorization: Bearer $GH_TOKEN" -H "User-Agent: molan-sync")
+          META=$(curl -fsSL "${AUTH[@]}" -H "Accept: application/vnd.github+json" "$API")
+          TAG=$(echo "$META" | jq -r '.tag_name')
+          ASSET_URL=$(echo "$META" | jq -r '[.assets[] | select(.name | endswith(".js"))][0].url // empty')
+          test -n "$ASSET_URL" || { echo "未找到 js 资产"; exit 1; }
+          curl -fsSL "${AUTH[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o latest.js
+          head -c 400 latest.js | grep -q '/\*!' || { echo "内容不像音源脚本"; exit 1; }
+          SZ=$(stat -c%s latest.js)
+          test "$SZ" -gt 100000 || { echo "文件过小：$SZ"; exit 1; }
+          echo "tag=$TAG size=$SZ"
+          printf '%s  %s\n' "$(date -u +%F)" "$TAG" > last-check.txt
+          git config user.name  'molan-sync[bot]'
+          git config user.email 'molan-sync[bot]@users.noreply.github.com'
+          git add latest.js last-check.txt
+          if git diff --cached --quiet; then
+            echo "无变化"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git commit -m "sync $TAG"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: 刷新 jsDelivr 缓存
+        if: steps.fetch.outputs.changed == 'true'
+        run: |
+          curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/latest.js" || true
